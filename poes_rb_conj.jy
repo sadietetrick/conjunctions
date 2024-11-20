@@ -1,0 +1,49 @@
+tr = getParam('timerange', '2013-09-24+12:38+to+2013-10-25+12:38', 'Timerange to load' )
+delta_mlt = getParam('delta_mlt', 0.5, 'How close in MLT')
+delta_l = getParam('delta_l', 0.5, 'How close in L shell')
+sc = getParam('sc', 'A', 'RBSP A or B', ['A', 'B'])
+poes = getParam('poes', 'METOP1', 'POES satellite', ['METOP1', 'METOP2', 'METOP3', 'NOAA15', 'NOAA16', 'NOAA18', 'NOAA19'])
+
+#rbspa_mlt= getDataSet('vap+das2server:http://planet.physics.uiowa.edu/das/das2Server?dataset=Van_Allen_Probes/A/Ephemeris/Geomagnetic&interval=60&item=plane_2',tr)
+rbspa_mlt= getDataSet('vap+das2server:https://emfisis.physics.uiowa.edu/das/server?dataset=Van_Allen_Probes/'+sc+'/Ephemeris/Geomagnetic&interval=60&item=plane_2',tr)
+metop1_mlt= getDataSet('vap+cdaweb:ds='+poes+'_POES-SEM2_FLUXES-2SEC&filter=poes&id=mlt',tr)
+
+
+
+rbspa_mlt.putProperty(QDataSet.UNITS, None )
+metop1_mlt.putProperty(QDataSet.UNITS, None )
+
+rbspa_mlt = synchronizeNN(metop1_mlt, rbspa_mlt)
+
+diff_mlta1 = abs(rbspa_mlt-metop1_mlt)
+#hwere is how to handle 0 and 24hr mlt
+r = where(diff_mlta1.gt(12))
+diff_mlta1[r] = 24. - diff_mlta1[r]
+
+
+#rbspa_l= getDataSet('vap+das2server:http://planet.physics.uiowa.edu/das/das2Server?dataset=Van_Allen_Probes/A/Ephemeris/Geomagnetic&interval=60&item=plane_3',tr)
+rbspa_l = getDataSet('vap+das2server:https://emfisis.physics.uiowa.edu/das/server?dataset=Van_Allen_Probes/'+sc+'/Ephemeris/Geomagnetic&interval=60&item=plane_3',tr)
+metop1_l= getDataSet('vap+cdaweb:ds='+poes+'_POES-SEM2_FLUXES-2SEC&filter=poes&id=l_igrf',tr)
+
+rbspa_l = synchronizeNN(metop1_l, rbspa_l)
+
+diff_la1 = abs(rbspa_l-metop1_l)
+
+
+diff_mlta1 = synchronizeNN(diff_la1, diff_mlta1)
+
+
+
+r = where(diff_mlta1.lt(delta_mlt).and(diff_la1.lt(delta_l)))
+
+tp= TimeParser.create('$Y$m$d_$H$M$S')
+
+tt = diff_la1.property(QDataSet.DEPEND_0)
+drtr = datumRange(tr)
+formatDataSet(diff_la1[r],'/tmp/ap/'+str(sc)+'_'+str(poes)+'/'+tp.format( drtr.min() )+'_'+tp.format( drtr.max() )+'.dat')
+#reset()
+#plot(0, diff_la1[r])
+#p,pe = plot(1, rbspa_mlt)
+#plot(2, metop1_mlt, overplotOf=p)
+#p,pe = plot(3, rbspa_l)
+#plot(4, metop1_l, overplotOf=p)
