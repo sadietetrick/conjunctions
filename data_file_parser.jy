@@ -1,0 +1,23 @@
+d = '/tmp/ap/A_METOP1/'
+ff= listDirectory( d + '*.dat')
+
+tp= TimeParser.create('$Y$m01_000000_$(Y;end)$m01_000000.dat')
+
+evts= None
+
+plot( 0, None )
+i=1
+for f in ff:
+    try:
+        ds= getDataSet( d + f )
+    except:
+        print 'possibly no data in file: '+f
+        continue
+    plot( i, ds )
+    i=i+1
+    tr= tp.parse(f).timeRange
+    evt= identifyContinuousBlocks( datum('2s'),tr,evts,xtags(ds) )
+    evts= append( evts, evt )
+
+plot( 0, evts )
+formatDataSet( evts,'/tmp/ap/rbspa_metop1_201309.dat')
